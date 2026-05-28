@@ -16,7 +16,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 
-DB_PATH = Path.home() / ".claude/memory/.metadata.db"
+DB_PATH = Path(os.environ.get("MEMORY_METADATA_DB", str(Path.home() / ".claude/memory/.metadata.db")))
 
 mcp = FastMCP(
     "memory-metadata-mcp",
@@ -102,11 +102,11 @@ def list_notes(
 
 
 @mcp.tool
-def get_note_metadata(path: str) -> dict[str, Any] | None:
+def get_note_metadata(path: str) -> dict[str, Any]:
     """
     Return full metadata for a single note by its absolute path.
 
-    Returns null if the note is not in the index.
+    Returns {"ok": False, "error": "not found"} if the note is not in the index.
     """
     sql = """
         SELECT n.path, n.filename, n.tier, n.category, n.source,
@@ -120,7 +120,7 @@ def get_note_metadata(path: str) -> dict[str, Any] | None:
     with _connect() as con:
         row = con.execute(sql, (path,)).fetchone()
         if row is None:
-            return None
+            return {"ok": False, "error": "not found"}
         result = dict(row)
         tags = [r[0] for r in con.execute(tag_sql, (path,)).fetchall()]
         result["tags"] = tags
