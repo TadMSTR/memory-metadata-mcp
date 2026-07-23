@@ -23,6 +23,9 @@ All notable changes to this project will be documented in this file.
 ### Removed
 - Unused `pyyaml` dependency (never imported by the server).
 
+### Security
+- Audit `memory-mcp-trio-repo-standard-2026-07` (2026-07-23): clean — no findings for this repo.
+
 ## [0.2.0] - 2026-05-28
 
 ### Added
