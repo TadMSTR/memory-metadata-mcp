@@ -9,14 +9,38 @@ All SQL queries use parameterized statements; no f-string injection.
 Runs on 127.0.0.1:8490 via streamable-http transport.
 """
 
+import logging
 import os
 import sqlite3
 from pathlib import Path
 from typing import Any
 
+import structlog
 from fastmcp import FastMCP
 
-DB_PATH = Path(os.environ.get("MEMORY_METADATA_DB", str(Path.home() / ".claude/memory/.metadata.db")))
+DB_PATH = Path(
+    os.environ.get("MEMORY_METADATA_DB", str(Path.home() / ".claude/memory/.metadata.db"))
+)
+
+
+def _configure_logging() -> None:
+    """Configure structlog for JSON output at the level given by LOG_LEVEL."""
+    level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper(), logging.INFO)
+    logging.basicConfig(format="%(message)s", level=level)
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(level),
+        logger_factory=structlog.PrintLoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
+log = structlog.get_logger("memory-metadata-mcp")
 
 mcp = FastMCP(
     "memory-metadata-mcp",
@@ -54,7 +78,7 @@ def list_notes(
         tier: Filter by tier (e.g. 'working', 'durable', 'distilled')
         tag: Filter to notes that include this tag
         created_after: ISO date string — only notes created on or after this date
-        expires_before: ISO date string — only notes expiring on or before this date (excludes 'never')
+        expires_before: ISO date — only notes expiring on/before this date (excludes 'never')
         owner_agent: Filter by owner_agent field
         limit: Max rows to return (default 50, max 500)
     """
@@ -70,9 +94,7 @@ def list_notes(
         conditions.append("n.tier = ?")
         params.append(tier)
     if tag is not None:
-        conditions.append(
-            "EXISTS (SELECT 1 FROM note_tags t WHERE t.path = n.path AND t.tag = ?)"
-        )
+        conditions.append("EXISTS (SELECT 1 FROM note_tags t WHERE t.path = n.path AND t.tag = ?)")
         params.append(tag)
     if created_after is not None:
         conditions.append("n.created >= ?")
@@ -143,9 +165,7 @@ def count_by(
         tier: Optional tier filter applied before grouping
     """
     if field not in ALLOWED_COUNT_FIELDS:
-        raise ValueError(
-            f"field must be one of {sorted(ALLOWED_COUNT_FIELDS)}, got {field!r}"
-        )
+        raise ValueError(f"field must be one of {sorted(ALLOWED_COUNT_FIELDS)}, got {field!r}")
 
     conditions: list[str] = []
     params: list[Any] = []
@@ -167,7 +187,14 @@ def count_by(
     return {row[0] if row[0] is not None else "(null)": row[1] for row in rows}
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Console entry point — start the streamable-http MCP server."""
+    _configure_logging()
     host = os.environ.get("MEMORY_METADATA_HOST", "127.0.0.1")
     port = int(os.environ.get("MEMORY_METADATA_PORT", "8490"))
+    log.info("starting", host=host, port=port, db_path=str(DB_PATH))
     mcp.run(transport="streamable-http", host=host, port=port)
+
+
+if __name__ == "__main__":
+    main()
