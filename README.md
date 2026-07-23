@@ -46,30 +46,20 @@ MCP endpoint: `http://127.0.0.1:8490/mcp`
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"
 ```
 
 Run directly:
 
 ```bash
-python server.py
+memory-metadata-mcp
+# or, equivalently:
+python -m memory_metadata_mcp.server
 ```
 
-Or configure as a PM2 service:
-
-```js
-// ecosystem.config.js
-{
-  name: "memory-metadata-mcp",
-  script: "/home/user/repos/memory-metadata-mcp/.venv/bin/python",
-  args: "server.py",
-  cwd: "/home/user/repos/memory-metadata-mcp",
-  env: {
-    MEMORY_METADATA_HOST: "127.0.0.1",
-    MEMORY_METADATA_PORT: "8490",
-  },
-}
-```
+A committed `ecosystem.config.js` runs it under PM2 from the
+`/opt/venvs/memory-metadata-mcp` virtualenv (`-m memory_metadata_mcp.server`,
+host/port from the env block).
 
 ## Configuration
 

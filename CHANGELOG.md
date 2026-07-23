@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-23
+
+### Changed
+- **Repo brought to the forge Python-MCP standard.** Migrated to a `src/memory_metadata_mcp/`
+  layout with a console entry point (`memory-metadata-mcp` = `memory_metadata_mcp.server:main`).
+  The PM2 launch changes to `-m memory_metadata_mcp.server` (see `ecosystem.config.js`);
+  HTTP host/port (`127.0.0.1:8490`) are unchanged.
+- Added `structlog` JSON logging (level via `LOG_LEVEL`).
+
+### Added
+- CI workflow (`.github/workflows/ci.yml`) — 3.11/3.12/3.13 matrix, SHA-pinned actions,
+  `ruff check` + `ruff format --check` + `pytest --cov` (fail-under 80) + `pip-audit --strict`.
+- `ruff` + coverage config in `pyproject.toml`; `.gitleaks.toml`; `CONTRIBUTING.md`;
+  `ARCHITECTURE.md`; committed `ecosystem.config.js`.
+- Tests for the `main()` entry point and logging config.
+
+### Removed
+- Unused `pyyaml` dependency (never imported by the server).
+
 ## [0.2.0] - 2026-05-28
 
 ### Added
