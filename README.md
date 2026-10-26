@@ -43,10 +43,12 @@ MCP endpoint: `http://127.0.0.1:8490/mcp`
 
 ## Setup
 
+Dependencies are pinned in `uv.lock`. Install exactly that set with
+[uv](https://docs.astral.sh/uv/):
+
 ```bash
-python3 -m venv .venv
+uv sync --frozen --extra dev
 source .venv/bin/activate
-pip install -e ".[dev]"
 ```
 
 Run directly:
@@ -60,6 +62,44 @@ python -m memory_metadata_mcp.server
 A committed `ecosystem.config.js` runs it under PM2 from the
 `/opt/venvs/memory-metadata-mcp` virtualenv (`-m memory_metadata_mcp.server`,
 host/port from the env block).
+
+## Installation
+
+memory-metadata-mcp is not published to PyPI. Install from a checkout of a release tag,
+from the committed `uv.lock`, so the dependency set is the one CI tested and audited.
+
+```bash
+VERSION=0.4.0
+VENV=/opt/venvs/memory-metadata-mcp
+
+# 1. The checkout is clean and is exactly the release tag on the remote. A local tag
+#    can be moved, and a dirty tree would be installed as it stands.
+git fetch --tags origin
+test -z "$(git status --porcelain)"
+# The peeled line (^{}) is listed last for an annotated tag; a lightweight tag has one line.
+test "$(git rev-parse HEAD)" = \
+  "$(git ls-remote origin "refs/tags/v$VERSION" "refs/tags/v$VERSION^{}" | tail -n1 | cut -f1)"
+
+# 2. Build a fresh venv at the path the service runs from. Pin the interpreter: uv
+#    otherwise prefers a Python it manages itself, which `uv python` can later remove
+#    or replace under a running service. --no-editable installs a copy of the package,
+#    so the service does not follow later changes to the checkout.
+UV_PROJECT_ENVIRONMENT=$VENV \
+  uv sync --frozen --no-editable --python /usr/bin/python3.13
+
+# 3. Confirm what was installed.
+"$VENV/bin/python3" -c "import importlib.metadata as m, memory_metadata_mcp.server; print(m.version('memory-metadata-mcp'))"
+```
+
+Build a fresh venv rather than installing into an existing one. `pip install .` into an
+existing venv keeps whatever older dependency versions it finds there, if they still
+satisfy the declared ranges. Build at the final path rather than building elsewhere and
+moving it: console-script shebangs embed the venv path. A uv-built venv has no `pip`.
+Stop the service before replacing its venv, and restart it after step 3.
+
+CI audits the locked set on every push and weekly, but nothing reads a scheduled run's
+result unless you watch it. Audit the deployed venv where it runs as well (for example
+`pip-audit --path <venv>/lib/python3.13/site-packages`).
 
 ## Configuration
 

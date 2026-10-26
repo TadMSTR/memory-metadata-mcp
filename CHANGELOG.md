@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-26
+
+### Changed
+- **Dependencies are locked.** `uv.lock` is committed and pins the full tested set; a
+  deploy builds a fresh venv from it (`uv sync --frozen --no-editable`). CI installs from
+  the lock as well, so a green run describes the set that ships.
+- `requirements.txt` removed. It only repeated the `pyproject.toml` ranges, and nothing
+  read it.
+
+### Security
+- Dependency floors: fastmcp 3.4.10, mcp 1.30, starlette 1.3.1, python-multipart 0.0.31,
+  pyjwt 2.15.0, anyio 4.14.2, h11 0.16.0, opentelemetry-api 1.45.1. Floors cover every
+  package a request reaches. Other runtime packages are held at fixed versions by
+  `uv.lock`, and the `pyproject.toml` comment names them.
+- The setuptools build backend is pinned (84.2.1), since `uv.lock` does not lock build
+  dependencies.
+- README "Installation": the deploy recipe checks that the checkout is the remote release
+  tag, pins the interpreter, and reads the installed version back.
+- CI audits the locked runtime and dev sets (`pip-audit --strict --locked`) in place of
+  `pip-audit .` on the declared ranges. A `latest` job, gating and run weekly, tests the
+  newest versions the ranges allow.
+- `release.yml` uses the same `actions/checkout` pin as `ci.yml`.
+
 ## [0.3.0] - 2026-07-23
 
 ### Changed
