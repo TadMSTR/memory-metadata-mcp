@@ -19,3 +19,7 @@ dist/
 # Core dumps
 core.*
 *.core
+
+# CI audit exports
+.audit-runtime/
+.audit-dev/

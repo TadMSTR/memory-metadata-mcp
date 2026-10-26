@@ -43,10 +43,12 @@ MCP endpoint: `http://127.0.0.1:8490/mcp`
 
 ## Setup
 
+Dependencies are pinned in `uv.lock`. Install exactly that set with
+[uv](https://docs.astral.sh/uv/):
+
 ```bash
-python3 -m venv .venv
+uv sync --frozen --extra dev
 source .venv/bin/activate
-pip install -e ".[dev]"
 ```
 
 Run directly:
@@ -59,7 +61,11 @@ python -m memory_metadata_mcp.server
 
 A committed `ecosystem.config.js` runs it under PM2 from the
 `/opt/venvs/memory-metadata-mcp` virtualenv (`-m memory_metadata_mcp.server`,
-host/port from the env block).
+host/port from the env block). That venv is built from the lock, non-editable:
+
+```bash
+UV_PROJECT_ENVIRONMENT=/opt/venvs/memory-metadata-mcp uv sync --frozen --no-editable
+```
 
 ## Configuration
 

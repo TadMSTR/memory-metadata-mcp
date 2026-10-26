@@ -5,10 +5,12 @@
 ```bash
 git clone https://github.com/TadMSTR/memory-metadata-mcp.git
 cd memory-metadata-mcp
-python -m venv .venv
+uv sync --frozen --extra dev
 source .venv/bin/activate
-pip install -e ".[dev]"
 ```
+
+Dependencies are pinned in `uv.lock`. After changing `pyproject.toml`, run `uv lock`
+and commit both files; CI fails on a lock that is out of sync (`uv lock --check`).
 
 ## Running tests
 
