@@ -1,5 +1,7 @@
 [build-system]
-requires = ["setuptools>=68"]
+# Pinned: uv.lock does not lock build dependencies, so a deploy-time wheel build would
+# otherwise resolve whatever setuptools is newest. Move it with a `uv lock` refresh.
+requires = ["setuptools==84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,12 +25,14 @@ dependencies = [
     # version it finds there.
     #
     # Scope, checked 2026-10-26 against every published advisory for every package in the
-    # locked runtime set: each package on the streamable-HTTP transport this server serves
-    # (uvicorn/h11, starlette, anyio, mcp, python-multipart) has a floor at or above its
-    # newest fix, as does pyjwt, which mcp pulls in for its auth layer. The server
-    # configures no auth provider. Packages off that path whose ranges still admit an
-    # advisory are held only by the lock: authlib, certifi, cryptography, dnspython, idna,
-    # jaraco-context, joserfc, opentelemetry-api, pydantic-settings, pygments,
+    # locked runtime set: each package a request reaches whose declared range still admitted
+    # an advisory has a floor at or above its newest fix. That is the streamable-HTTP
+    # transport (h11, starlette, anyio, mcp, python-multipart), opentelemetry-api (fastmcp
+    # parses each tool call's trace context with it), and pyjwt, which mcp pulls in for its
+    # auth layer. uvicorn needs no floor: no advisory falls in its range. The server
+    # configures no auth provider and makes no outbound HTTP. Packages off the request path
+    # whose ranges still admit an advisory are held only by the lock: authlib, certifi,
+    # cryptography, dnspython, idna, jaraco-context, joserfc, pydantic-settings, pygments,
     # python-dotenv.
     "starlette>=1.3.1",
     # Capped below 2 with fastmcp's own range.
@@ -38,6 +42,8 @@ dependencies = [
     "anyio>=4.14.2",
     # uvicorn's HTTP/1.1 parser.
     "h11>=0.16.0",
+    # fastmcp extracts the caller's traceparent/tracestate from every tool call's _meta.
+    "opentelemetry-api>=1.45.1",
 ]
 
 [project.optional-dependencies]

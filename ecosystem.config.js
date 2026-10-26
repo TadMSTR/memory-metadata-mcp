@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: "memory-metadata-mcp",
-    // src/ layout + console entry point. The venv is built from uv.lock, non-editable:
-    //   UV_PROJECT_ENVIRONMENT=/opt/venvs/memory-metadata-mcp uv sync --frozen --no-editable
+    // src/ layout + console entry point. The venv is built fresh from uv.lock, non-editable,
+    // with the interpreter pinned and the checkout verified: README "Installation".
     // The `-m` form matches the memsearch-mcp sibling; `memory-metadata-mcp` (the
     // console script) is an equivalent launch once the package is installed.
     script: "/opt/venvs/memory-metadata-mcp/bin/python3",
