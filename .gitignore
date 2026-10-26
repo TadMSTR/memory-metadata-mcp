@@ -17,7 +17,7 @@ dist/
 *.env
 
 # Core dumps
-core.*
+core.[0-9]*
 *.core
 
 # CI audit exports

@@ -19,6 +19,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # This job holds a contents: write token; gh reads it from GH_TOKEN, so
+          # nothing needs it left in .git/config.
+          persist-credentials: false
 
       - name: Create GitHub Release (source only)
         env:
