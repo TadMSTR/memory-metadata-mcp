@@ -17,13 +17,13 @@ Transport: streamable-http
 
 ## DB
 
-Index at `~/.claude/memory/.metadata.db` (SQLite WAL mode).
-Populated by `~/scripts/memory-metadata-index.py`.
-Updated incrementally by memsearch-watch on each .md write.
+Index at `~/.claude/memory/.metadata.db` (SQLite WAL mode), overridable with
+`MEMORY_METADATA_DB`. Populated by a companion indexer script that is not part of this
+repo, and updated incrementally on each memory note write.
 
 ## Security
 
 - Read-only: no write tools
-- Binds to 127.0.0.1 only
+- Binds to 127.0.0.1 by default (`MEMORY_METADATA_HOST`); the bind is not validated in code
 - All SQL queries use parameterized statements
 - `count_by` field validated against explicit allowlist

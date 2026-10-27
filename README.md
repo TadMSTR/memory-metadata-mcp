@@ -14,13 +14,13 @@ Three tools:
 
 | Tool | What It Does |
 |------|-------------|
-| `list_notes` | Filter notes by category, tier, tag, date range, or owner agent. Returns paths and metadata only — no body content. |
-| `get_note_metadata` | Return full frontmatter metadata for a single note by absolute path, including its tag list. |
+| `list_notes` | Filter notes by `category`, `tier`, `tag`, `created_after`, `expires_before`, or `owner_agent`; `limit` defaults to 50 (max 500), newest first. Returns paths and metadata only — no body content. |
+| `get_note_metadata` | Return full frontmatter metadata for a single note by absolute path, including its tag list. Returns `{"ok": false, "error": "not found"}` for a path not in the index. |
 | `count_by` | Aggregate counts grouped by `category`, `tier`, `source`, or `owner_agent` — with optional pre-filters. |
 
 ## The Index
 
-The server reads from a SQLite WAL-mode database at `~/.claude/memory/.metadata.db`. The index is populated by a companion indexer script and updated incrementally on each memory note write.
+The server reads from a SQLite WAL-mode database, by default `~/.claude/memory/.metadata.db` (see [Configuration](#configuration)). The index is populated by a companion indexer script and updated incrementally on each memory note write.
 
 Each note record stores: `path`, `filename`, `tier`, `category`, `source`, `created`, `expires`, `owner_agent`, `body_size`, `file_sha`, `last_indexed_at`. Tags live in a separate `note_tags` table and are returned on `get_note_metadata` calls.
 
@@ -107,13 +107,17 @@ result unless you watch it. Audit the deployed venv where it runs as well (for e
 |---------|---------|-------------|
 | `MEMORY_METADATA_HOST` | `127.0.0.1` | Bind address |
 | `MEMORY_METADATA_PORT` | `8490` | Port |
+| `MEMORY_METADATA_DB` | `~/.claude/memory/.metadata.db` | Path to the SQLite index (the default is resolved via `Path.home()`) |
+| `LOG_LEVEL` | `INFO` | structlog level; an unrecognised value falls back to `INFO` |
 
-The DB path is always `~/.claude/memory/.metadata.db` (resolved via `Path.home()`). If the database doesn't exist, the server starts but tool calls will fail until the indexer has run at least once.
+`MEMORY_METADATA_DB` is read once, at import. If the database doesn't exist, the server
+starts, but the first tool call creates an empty file at that path and fails (no `notes`
+table) until the indexer has run at least once.
 
 ## Security
 
-- **Read-only** — no write, delete, or schema-modification tools
-- **Loopback-only** — binds to `127.0.0.1` by default; no Docker network exposure
+- **Read-only tools** — no write, delete, or schema-modification tools. The SQLite connection itself is opened read-write (not `mode=ro`), so read-only is a property of the tool set, not of the connection
+- **Loopback by default** — binds to `127.0.0.1` unless `MEMORY_METADATA_HOST` says otherwise; the value is not validated, so keep it loopback. No Docker network exposure
 - **Parameterized SQL** — all queries use `?` placeholders; no f-string injection
 - **`count_by` allowlist** — the `field` argument is validated against an explicit set before being interpolated into the GROUP BY clause
 
