@@ -23,7 +23,7 @@ repo, and updated incrementally on each memory note write.
 
 ## Security
 
-- Read-only: no write tools
-- Binds to 127.0.0.1 by default (`MEMORY_METADATA_HOST`); the bind is not validated in code
+- Read-only: no write tools, and the SQLite connection is opened with `mode=ro`
+- Binds to 127.0.0.1 by default (`MEMORY_METADATA_HOST`); a non-loopback value refuses to start unless `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1`
 - All SQL queries use parameterized statements
 - `count_by` field validated against explicit allowlist

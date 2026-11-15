@@ -9,6 +9,7 @@ All SQL queries use parameterized statements; no f-string injection.
 Runs on 127.0.0.1:8490 via streamable-http transport.
 """
 
+import ipaddress
 import logging
 import os
 import sqlite3
@@ -55,7 +56,14 @@ ALLOWED_COUNT_FIELDS = {"category", "tier", "source", "owner_agent"}
 
 
 def _connect() -> sqlite3.Connection:
-    con = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    """Open the index read-only (vikunja#1274).
+
+    ``mode=ro`` makes a write fail at the connection rather than relying on the tool set
+    having none, and a missing DB raises instead of being created empty. ``as_uri()``
+    percent-encodes the path, so a ``?`` or ``#`` in it cannot become a URI parameter.
+    """
+    uri = DB_PATH.absolute().as_uri() + "?mode=ro"
+    con = sqlite3.connect(uri, uri=True, check_same_thread=False)
     con.row_factory = sqlite3.Row
     return con
 
@@ -187,10 +195,41 @@ def count_by(
     return {row[0] if row[0] is not None else "(null)": row[1] for row in rows}
 
 
+_NON_LOOPBACK_OPT_IN = "MEMORY_METADATA_ALLOW_NON_LOOPBACK"
+
+
+def _is_loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _check_bind_host(host: str) -> None:
+    """Refuse a non-loopback bind unless the operator opted in (vikunja#1274).
+
+    The server has no authentication, so a non-loopback bind serves the index to anyone
+    who can reach the port. An opt-in exists for a deployment that puts its own access
+    control in front.
+    """
+    if _is_loopback(host):
+        return
+    if os.environ.get(_NON_LOOPBACK_OPT_IN, "").strip().lower() in ("1", "true", "yes"):
+        log.warning("non_loopback_bind", host=host, opt_in=_NON_LOOPBACK_OPT_IN)
+        return
+    raise SystemExit(
+        f"memory-metadata-mcp: refusing to bind {host[:64]!r}: not a loopback address. "
+        f"The server has no authentication. Set {_NON_LOOPBACK_OPT_IN}=1 to allow it."
+    )
+
+
 def main() -> None:
     """Console entry point — start the streamable-http MCP server."""
     _configure_logging()
     host = os.environ.get("MEMORY_METADATA_HOST", "127.0.0.1")
+    _check_bind_host(host)
     port = int(os.environ.get("MEMORY_METADATA_PORT", "8490"))
     log.info("starting", host=host, port=port, db_path=str(DB_PATH))
     mcp.run(transport="streamable-http", host=host, port=port)

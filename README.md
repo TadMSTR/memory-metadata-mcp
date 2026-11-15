@@ -105,7 +105,8 @@ result unless you watch it. Audit the deployed venv where it runs as well (for e
 
 | Env Var | Default | Description |
 |---------|---------|-------------|
-| `MEMORY_METADATA_HOST` | `127.0.0.1` | Bind address |
+| `MEMORY_METADATA_HOST` | `127.0.0.1` | Bind address. Must be loopback (`127.0.0.0/8`, `::1` or `localhost`) unless `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1`; otherwise the server refuses to start |
+| `MEMORY_METADATA_ALLOW_NON_LOOPBACK` | unset | Set to `1` to allow a non-loopback `MEMORY_METADATA_HOST`. The server has no authentication: put your own access control in front |
 | `MEMORY_METADATA_PORT` | `8490` | Port |
 | `MEMORY_METADATA_DB` | `~/.claude/memory/.metadata.db` | Path to the SQLite index (the default is resolved via `Path.home()`) |
 | `LOG_LEVEL` | `INFO` | structlog level; an unrecognised value falls back to `INFO` |
@@ -116,8 +117,8 @@ table) until the indexer has run at least once.
 
 ## Security
 
-- **Read-only tools** — no write, delete, or schema-modification tools. The SQLite connection itself is opened read-write (not `mode=ro`), so read-only is a property of the tool set, not of the connection
-- **Loopback by default** — binds to `127.0.0.1` unless `MEMORY_METADATA_HOST` says otherwise; the value is not validated, so keep it loopback. No Docker network exposure
+- **Read-only tools and connection** — no write, delete, or schema-modification tools, and the SQLite connection is opened with `mode=ro`, so a write fails at the connection. A missing database raises an error instead of being created empty
+- **Loopback only by default** — binds to `127.0.0.1`. A non-loopback `MEMORY_METADATA_HOST` refuses to start unless `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1` is set. No Docker network exposure
 - **Parameterized SQL** — all queries use `?` placeholders; no f-string injection
 - **`count_by` allowlist** — the `field` argument is validated against an explicit set before being interpolated into the GROUP BY clause
 

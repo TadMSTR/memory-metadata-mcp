@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-11-15
+
+### Security
+- **The SQLite index is opened read-only** (vikunja#1274). The connection used to be
+  read-write, so read-only was only a property of the tool set, and a missing database
+  was created empty on the first call, which then failed with no `notes` table. It is
+  now opened as `file:<path>?mode=ro` (the path percent-encoded, so a `?` in it cannot
+  become a URI parameter): a write fails at the connection, and a missing database raises.
+- **A non-loopback `MEMORY_METADATA_HOST` refuses to start** (vikunja#1274). The value
+  went straight to `mcp.run`, and the server has no authentication. Loopback addresses and
+  `localhost` are accepted; anything else needs `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1`,
+  which logs a warning.
+- Dependency floors for two advisories: `opentelemetry-api>=1.45.2` (CVE-2026-126360) and
+  `dnspython>=2.9.2` (CVE-2026-128089). The lock moves dnspython 2.9.0 → 2.9.2 and
+  opentelemetry-api 1.45.1 → 1.45.2.
+
+### Changed
+- `ecosystem.config.js` derives `cwd` and the log path instead of naming one host's paths.
+
 ## [0.4.0] - 2026-10-26
 
 ### Changed
