@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memory-metadata-mcp"
-version = "0.4.0"
+version = "0.4.1"
 description = "Read-only MCP server exposing SQLite metadata index for ~/.claude/memory/ notes"
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,8 +32,8 @@ dependencies = [
     # auth layer. uvicorn needs no floor: no advisory falls in its range. The server
     # configures no auth provider and makes no outbound HTTP. Packages off the request path
     # whose ranges still admit an advisory are held only by the lock: authlib, certifi,
-    # cryptography, dnspython, idna, jaraco-context, joserfc, pydantic-settings, pygments,
-    # python-dotenv.
+    # cryptography, idna, jaraco-context, joserfc, pydantic-settings, pygments,
+    # python-dotenv. dnspython has its own floor below.
     "starlette>=1.3.1",
     # Capped below 2 with fastmcp's own range.
     "mcp>=1.30,<2",
@@ -43,7 +43,12 @@ dependencies = [
     # uvicorn's HTTP/1.1 parser.
     "h11>=0.16.0",
     # fastmcp extracts the caller's traceparent/tracestate from every tool call's _meta.
-    "opentelemetry-api>=1.45.1",
+    # 1.45.2: CVE-2026-126360 (2026-11-15).
+    "opentelemetry-api>=1.45.2",
+    # Off the request path, but deploys go through a pip install that keeps an
+    # already-satisfied dependency (vikunja#981), so only a floor moves it.
+    # 2.9.2: CVE-2026-128089 (2026-11-15).
+    "dnspython>=2.9.2",
 ]
 
 [project.optional-dependencies]

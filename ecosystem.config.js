@@ -1,3 +1,10 @@
+// Paths are derived, not written out: the checkout is wherever this file is, and logs go
+// to ~/logs. Adjust LOG_FILE if your host keeps logs elsewhere.
+const os = require("os");
+const path = require("path");
+
+const LOG_FILE = path.join(os.homedir(), "logs", "memory-metadata-mcp.log");
+
 module.exports = {
   apps: [{
     name: "memory-metadata-mcp",
@@ -7,15 +14,15 @@ module.exports = {
     // console script) is an equivalent launch once the package is installed.
     script: "/opt/venvs/memory-metadata-mcp/bin/python3",
     args: ["-m", "memory_metadata_mcp.server"],
-    cwd: "/home/ted/repos/personal/memory-metadata-mcp",
+    cwd: __dirname,
     interpreter: "none",
 
     restart_delay: 5000,
     max_restarts: 10,
     min_uptime: "10s",
 
-    out_file: "/home/ted/logs/memory-metadata-mcp.log",
-    error_file: "/home/ted/logs/memory-metadata-mcp.log",
+    out_file: LOG_FILE,
+    error_file: LOG_FILE,
     merge_logs: true,
     time: true,
 

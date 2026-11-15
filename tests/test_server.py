@@ -260,3 +260,113 @@ def test_main_invokes_mcp_run(monkeypatch):
     assert called["transport"] == "streamable-http"
     assert called["host"] == "127.0.0.1"
     assert called["port"] == 8490
+
+
+# ── read-only connection (vikunja#1274) ───────────────────────────────────────
+
+
+def test_connection_refuses_writes(db_path):
+    from memory_metadata_mcp import server as mm
+
+    con = mm._connect()
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="readonly"):
+            con.execute("DELETE FROM notes")
+    finally:
+        con.close()
+    # The control: the same statement through a plain connection does write.
+    plain = sqlite3.connect(db_path)
+    try:
+        assert plain.execute("SELECT COUNT(*) FROM notes").fetchone()[0] > 0
+    finally:
+        plain.close()
+
+
+def test_missing_db_raises_and_is_not_created(tmp_path, monkeypatch):
+    from memory_metadata_mcp import server as mm
+
+    missing = tmp_path / "absent.db"
+    monkeypatch.setattr(mm, "DB_PATH", missing)
+    with pytest.raises(sqlite3.OperationalError):
+        mm._connect()
+    assert not missing.exists()
+
+
+@pytest.mark.parametrize("name", ["odd?mode=rw.db", "hash#frag.db", "pct%20name.db", "sp ace.db"])
+def test_uri_special_characters_in_the_path_are_encoded(tmp_path, monkeypatch, name):
+    """A `?` in the path must not become a URI parameter (it could override mode=ro)."""
+    from memory_metadata_mcp import server as mm
+
+    db = tmp_path / name
+    _make_db(db)
+    monkeypatch.setattr(mm, "DB_PATH", db)
+    assert len(mm.list_notes()) > 0
+    con = mm._connect()
+    try:
+        with pytest.raises(sqlite3.OperationalError, match="readonly"):
+            con.execute("DELETE FROM notes")
+    finally:
+        con.close()
+
+
+def test_relative_db_path_is_resolved(tmp_path, monkeypatch):
+    from memory_metadata_mcp import server as mm
+
+    _make_db(tmp_path / "rel.db")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(mm, "DB_PATH", Path("rel.db"))
+    assert len(mm.list_notes()) > 0
+
+
+# ── loopback bind check (vikunja#1274) ────────────────────────────────────────
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "::1", "::1%lo", "localhost"])
+def test_main_accepts_a_loopback_host(monkeypatch, host):
+    from memory_metadata_mcp import server as mm
+
+    called = {}
+    monkeypatch.setattr(mm.mcp, "run", lambda **kw: called.update(kw))
+    monkeypatch.setenv("MEMORY_METADATA_HOST", host)
+    monkeypatch.delenv("MEMORY_METADATA_ALLOW_NON_LOOPBACK", raising=False)
+    mm.main()
+    assert called["host"] == host
+
+
+@pytest.mark.parametrize(
+    "host", ["0.0.0.0", "::", "192.0.2.10", "example.com", "", "localhost.example"]
+)
+def test_main_refuses_a_non_loopback_host(monkeypatch, host):
+    from memory_metadata_mcp import server as mm
+
+    ran = []
+    monkeypatch.setattr(mm.mcp, "run", lambda **kw: ran.append(kw))
+    monkeypatch.setenv("MEMORY_METADATA_HOST", host)
+    monkeypatch.delenv("MEMORY_METADATA_ALLOW_NON_LOOPBACK", raising=False)
+    with pytest.raises(SystemExit, match="refusing to bind") as exc:
+        mm.main()
+    assert "MEMORY_METADATA_ALLOW_NON_LOOPBACK=1" in str(exc.value)
+    assert ran == []
+
+
+@pytest.mark.parametrize("value", ["1", "true", "YES", " yes "])
+def test_opt_in_allows_a_non_loopback_host(monkeypatch, value):
+    from memory_metadata_mcp import server as mm
+
+    called = {}
+    monkeypatch.setattr(mm.mcp, "run", lambda **kw: called.update(kw))
+    monkeypatch.setenv("MEMORY_METADATA_HOST", "0.0.0.0")
+    monkeypatch.setenv("MEMORY_METADATA_ALLOW_NON_LOOPBACK", value)
+    mm.main()
+    assert called["host"] == "0.0.0.0"
+
+
+@pytest.mark.parametrize("value", ["", "0", "false", "no", "on"])
+def test_other_opt_in_values_still_refuse(monkeypatch, value):
+    from memory_metadata_mcp import server as mm
+
+    monkeypatch.setattr(mm.mcp, "run", lambda **kw: None)
+    monkeypatch.setenv("MEMORY_METADATA_HOST", "0.0.0.0")
+    monkeypatch.setenv("MEMORY_METADATA_ALLOW_NON_LOOPBACK", value)
+    with pytest.raises(SystemExit):
+        mm.main()
