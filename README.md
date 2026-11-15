@@ -120,7 +120,7 @@ table) until the indexer has run at least once.
 
 - **Read-only tools and connection** — no write, delete, or schema-modification tools, and the SQLite connection is opened with `mode=ro`, so a write fails at the connection. A missing database raises an error instead of being created empty
 - **Loopback only by default** — binds to `127.0.0.1`. A non-loopback `MEMORY_METADATA_HOST` refuses to start unless `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1` is set. No Docker network exposure
-- **DNS-rebinding protection** — a request whose `Host` is not a loopback name or the bound address (any port), or an exact `MEMORY_METADATA_ALLOWED_HOSTS` entry, is refused with 421, and any request carrying an `Origin` header is refused with 403. A loopback bind alone does not stop a browser page whose name rebinds to 127.0.0.1
+- **DNS-rebinding protection** — a request whose `Host` is not a loopback name or the bound address (any port; the port part is a prefix match (mcp's `name:*` wildcard), so `localhost:8490.evil.example` passes too; no browser can send such a Host, so this does not reopen DNS rebinding, but it is not a check against non-browser clients), or an exact `MEMORY_METADATA_ALLOWED_HOSTS` entry, is refused with 421, and any request carrying an `Origin` header is refused with 403. A loopback bind alone does not stop a browser page whose name rebinds to 127.0.0.1
 - **Parameterized SQL** — all queries use `?` placeholders; no f-string injection
 - **`count_by` allowlist** — the `field` argument is validated against an explicit set before being interpolated into the GROUP BY clause
 

@@ -20,6 +20,9 @@ All notable changes to this project will be documented in this file.
   isolation from a browser page on the same host whose name rebinds to 127.0.0.1. A request
   whose `Host` is not a loopback name or the bound address (any port) now gets 421, and any
   request carrying an `Origin` gets 403, using the MCP SDK's own `TransportSecurityMiddleware`.
+  The port part is a prefix match (`localhost:8490.evil.example` passes). No browser can send
+  that Host, so DNS rebinding stays closed, but this is not access control against a
+  non-browser client.
   `MEMORY_METADATA_ALLOWED_HOSTS` adds exact `host:port` values; an entry containing `*`
   refuses to start.
 - Dependency floors for two advisories: `opentelemetry-api>=1.45.2` (CVE-2026-126360) and
