@@ -16,6 +16,12 @@ All notable changes to this project will be documented in this file.
   went straight to `mcp.run`, and the server has no authentication. Loopback addresses and
   `localhost` are accepted; anything else needs `MEMORY_METADATA_ALLOW_NON_LOOPBACK=1`,
   which logs a warning.
+- **Host/Origin check on the HTTP app** (DNS-rebinding protection). A loopback bind is not
+  isolation from a browser page on the same host whose name rebinds to 127.0.0.1. A request
+  whose `Host` is not a loopback name or the bound address (any port) now gets 421, and any
+  request carrying an `Origin` gets 403, using the MCP SDK's own `TransportSecurityMiddleware`.
+  `MEMORY_METADATA_ALLOWED_HOSTS` adds exact `host:port` values; an entry containing `*`
+  refuses to start.
 - Dependency floors for two advisories: `opentelemetry-api>=1.45.2` (CVE-2026-126360) and
   `dnspython>=2.9.2` (CVE-2026-128089). The lock moves dnspython 2.9.0 → 2.9.2 and
   opentelemetry-api 1.45.1 → 1.45.2.
